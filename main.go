@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/Tiandapaopao/crawler/collect"
+	"github.com/Tiandapaopao/crawler/proxy"
 	"time"
 )
 
@@ -12,9 +13,16 @@ import (
 //var headerRe = regexp.MustCompile(`<div class="small_cardcontent__BTALp"[\s\S]*?<h2>([\s\S]*?)</h2>`)
 
 func main() {
-	url := "https://book.douban.com/subject/26416768/"
+	proxyURLs := []string{"http://172.19.0.2:8888", "http://172.19.0.2:8888"}
+	p, err := proxy.RoundRobinProxySwitcher(proxyURLs...)
+	if err != nil {
+		fmt.Println("RoundRobinProxySwitcher failed")
+	}
+
+	url := "https://www.zhishew.com"
 	var f collect.Fetcher = collect.BrowserFetch{
-		Timeout: 300 * time.Millisecond,
+		Timeout: 3000 * time.Millisecond,
+		Proxy:   p,
 	}
 	body, err := f.Get(url)
 	if err != nil {
