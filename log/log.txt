@@ -1,0 +1,7 @@
+{"level":"INFO","ts":"2023-02-08T15:43:00.568Z","caller":"crawler/main.go:15","msg":"log init end"}
+{"level":"INFO","ts":"2023-02-08T15:56:29.977Z","caller":"crawler/main.go:19","msg":"log init end"}
+{"level":"ERROR","ts":"2023-02-08T15:56:29.979Z","caller":"crawler/main.go:33","msg":"read content failed","error":"Get \"https://www.zhishew.com\": proxyconnect tcp: dial tcp 172.19.0.2:8888: connect: connection refused"}
+{"level":"INFO","ts":"2023-02-08T15:57:19.321Z","caller":"crawler/main.go:19","msg":"log init end"}
+{"level":"ERROR","ts":"2023-02-08T15:57:19.323Z","caller":"crawler/main.go:33","msg":"read content failed","error":"Get \"https://www.zhishew.com\": Service Unavailable"}
+{"level":"INFO","ts":"2023-02-08T15:57:31.321Z","caller":"crawler/main.go:19","msg":"log init end"}
+{"level":"ERROR","ts":"2023-02-08T15:57:31.323Z","caller":"crawler/main.go:33","msg":"read content failed","error":"Get \"https://www.zhishew.com\": Service Unavailable"}
