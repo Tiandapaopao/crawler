@@ -5,3 +5,8 @@
 {"level":"ERROR","ts":"2023-02-08T15:57:19.323Z","caller":"crawler/main.go:33","msg":"read content failed","error":"Get \"https://www.zhishew.com\": Service Unavailable"}
 {"level":"INFO","ts":"2023-02-08T15:57:31.321Z","caller":"crawler/main.go:19","msg":"log init end"}
 {"level":"ERROR","ts":"2023-02-08T15:57:31.323Z","caller":"crawler/main.go:33","msg":"read content failed","error":"Get \"https://www.zhishew.com\": Service Unavailable"}
+{"level":"INFO","ts":"2023-02-10T08:01:28.061Z","caller":"crawler/main.go:18","msg":"log init end"}
+{"level":"INFO","ts":"2023-02-10T08:01:28.369Z","caller":"crawler/main.go:39","msg":"get content","len":7766}
+{"level":"INFO","ts":"2023-02-10T08:02:03.222Z","caller":"crawler/main.go:19","msg":"log init end"}
+{"level":"INFO","ts":"2023-02-10T08:02:03.400Z","caller":"crawler/main.go:40","msg":"get content","len":7766}
+{"level":"INFO","ts":"2023-02-13T01:47:19.554Z","caller":"crawler/main.go:21","msg":"log init end"}
