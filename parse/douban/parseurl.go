@@ -13,26 +13,30 @@ func ParseURL(contents []byte, req *collect.Request) collect.ParseResult {
 	matches := re.FindAllSubmatch(contents, -1)
 	result := collect.ParseResult{}
 
+	i := 0
 	for _, m := range matches {
+		//fmt.Println(i)
 		u := string(m[1])
 		//fmt.Println(u)
 		result.Requesrts = append(
 			result.Requesrts, &collect.Request{
-				Url:    u,
-				Cookie: req.Cookie,
+				Task:  req.Task,
+				Url:   u,
+				Depth: req.Depth + 1,
 				ParseFunc: func(c []byte, request *collect.Request) collect.ParseResult {
 					return GetContent(c, u)
 				},
 			})
+		i++
 	}
 	return result
 }
 
-const ContentRe = `<div class="topic-content">[\s\S]*?商场[\s\S]*?<div`
+const ContentRe = `<div class="topic-content">[\s\S]*?阳台[\s\S]*?<div class="aside">`
 
 func GetContent(contents []byte, url string) collect.ParseResult {
 	re := regexp.MustCompile(ContentRe)
-	//fmt.Println(url)
+	//fmt.Println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
 	ok := re.Match(contents)
 	if !ok {
 		return collect.ParseResult{
