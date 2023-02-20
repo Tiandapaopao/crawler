@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"github.com/Tiandapaopao/crawler/collect"
 	"go.uber.org/zap"
+	"sync"
 	"time"
 )
 
 type Crawler struct {
-	out chan collect.ParseResult
+	out         chan collect.ParseResult
+	Visited     map[string]bool
+	VisitedLock sync.Mutex
 	options
 }
 
@@ -32,6 +35,7 @@ func NewEngine(opts ...Option) *Crawler {
 	}
 	e := &Crawler{}
 	e.options = options
+	e.Visited = make(map[string]bool, 100)
 	out := make(chan collect.ParseResult)
 	e.out = out
 	return e
@@ -95,6 +99,14 @@ func (s *Crawler) CreateWork() {
 			)
 			continue
 		}
+
+		if s.HasVisited(r) {
+			s.Logger.Debug("request has visited",
+				zap.String("url:", r.Url),
+			)
+			continue
+		}
+		s.StoreVisited(r)
 		body, err := r.Task.Fetcher.Get(r)
 		if len(body) < 6000 {
 			s.Logger.Error("can't fetch ",
@@ -146,4 +158,21 @@ func (s *Schedule) Pull() *collect.Request {
 func (s *Schedule) Output() *collect.Request {
 	r := <-s.workerCh
 	return r
+}
+
+func (e *Crawler) HasVisited(r *collect.Request) bool {
+	e.VisitedLock.Lock()
+	defer e.VisitedLock.Unlock()
+	unique := r.Unique()
+	return e.Visited[unique]
+}
+
+func (e *Crawler) StoreVisited(reqs ...*collect.Request) {
+	e.VisitedLock.Lock()
+	defer e.VisitedLock.Unlock()
+
+	for _, r := range reqs {
+		unique := r.Unique()
+		e.Visited[unique] = true
+	}
 }

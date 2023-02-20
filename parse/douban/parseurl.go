@@ -20,9 +20,10 @@ func ParseURL(contents []byte, req *collect.Request) collect.ParseResult {
 		//fmt.Println(u)
 		result.Requesrts = append(
 			result.Requesrts, &collect.Request{
-				Task:  req.Task,
-				Url:   u,
-				Depth: req.Depth + 1,
+				Task:   req.Task,
+				Url:    u,
+				Depth:  req.Depth + 1,
+				Method: "GET",
 				ParseFunc: func(c []byte, request *collect.Request) collect.ParseResult {
 					return GetContent(c, u)
 				},
@@ -36,7 +37,6 @@ const ContentRe = `<div class="topic-content">[\s\S]*?阳台[\s\S]*?<div class="
 
 func GetContent(contents []byte, url string) collect.ParseResult {
 	re := regexp.MustCompile(ContentRe)
-	//fmt.Println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
 	ok := re.Match(contents)
 	if !ok {
 		return collect.ParseResult{
