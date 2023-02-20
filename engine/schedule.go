@@ -7,81 +7,102 @@ import (
 	"time"
 )
 
-type Schedule struct {
-	requestCh chan *collect.Request
-	workerCh  chan *collect.Request
-	out       chan collect.ParseResult
+type Crawler struct {
+	out chan collect.ParseResult
 	options
 }
 
-func NewSchedule(opts ...Option) *Schedule {
+type Scheduler interface {
+	Schedule()
+	Push(...*collect.Request)
+	Pull() *collect.Request
+}
+
+type Schedule struct {
+	requestCh chan *collect.Request
+	workerCh  chan *collect.Request
+	Logger    *zap.Logger
+	reqQueue  []*collect.Request
+}
+
+func NewEngine(opts ...Option) *Crawler {
 	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
 	}
+	e := &Crawler{}
+	e.options = options
+	out := make(chan collect.ParseResult)
+	e.out = out
+	return e
+}
+
+func NewSchedule() *Schedule {
 	s := &Schedule{}
-	s.options = options
+	requestCh := make(chan *collect.Request)
+	workerCh := make(chan *collect.Request)
+	s.requestCh = requestCh
+	s.workerCh = workerCh
 	return s
 }
 
-func (s *Schedule) Run() {
-	requestCh := make(chan *collect.Request)
-	workerCh := make(chan *collect.Request)
-	out := make(chan collect.ParseResult)
-	s.requestCh = requestCh
-	s.workerCh = workerCh
-	s.out = out
-	go s.Schedule()
-	for i := 0; i < s.WorkCount; i++ {
-		go s.CreateWork()
+func (e *Crawler) Schedule() {
+	var reqs []*collect.Request
+	for _, seed := range e.Seeds {
+		seed.RootReq.Task = seed
+		seed.RootReq.Url = seed.Url
+		reqs = append(reqs, seed.RootReq)
+	}
+	go e.scheduler.Schedule()
+	go e.scheduler.Push(reqs...)
+}
+
+func (e *Crawler) Run() {
+	go e.Schedule()
+	for i := 0; i < e.WorkCount; i++ {
+		go e.CreateWork()
 	}
 	time.Sleep(2 * time.Second)
-	s.HandleResult()
+	e.HandleResult()
 }
 
 func (s *Schedule) Schedule() {
-	var reqQueue []*collect.Request
-	for _, seed := range s.Seeds {
-		seed.RootReq.Task = seed
-		seed.RootReq.Url = seed.Url
-		reqQueue = append(reqQueue, seed.RootReq)
-	}
+	for {
+		var req *collect.Request
+		var ch chan *collect.Request
 
-	go func() {
-		for {
-			var req *collect.Request
-			var ch chan *collect.Request
-
-			if len(reqQueue) > 0 {
-				req = reqQueue[0]
-				//fmt.Println(req.Url)
-				reqQueue = reqQueue[1:]
-				//time.Sleep(1 * time.Second)
-				ch = s.workerCh
-			}
-			select {
-			case r := <-s.requestCh:
-				//fmt.Println(r.Url)
-				reqQueue = append(reqQueue, r)
-
-			case ch <- req:
-				//fmt.Println(req.Url) //条数减少
-
-			}
+		if len(s.reqQueue) > 0 {
+			req = s.reqQueue[0]
+			s.reqQueue = s.reqQueue[1:]
+			ch = s.workerCh
 		}
-	}()
+		select {
+		case r := <-s.requestCh:
+			s.reqQueue = append(s.reqQueue, r)
+
+		case ch <- req:
+			fmt.Println(123)
+		}
+	}
 }
 
-func (s *Schedule) CreateWork() {
+func (s *Crawler) CreateWork() {
 	for {
-		r := <-s.workerCh
-
+		r := s.scheduler.Pull()
 		if err := r.Check(); err != nil {
-			s.Logger.Error("check failed", zap.Error(err))
+			s.Logger.Error("check failed",
+				zap.Error(err),
+			)
 			continue
 		}
-		//fmt.Println(r.Url)
-		body, err := s.Fetcher.Get(r)
+		body, err := r.Task.Fetcher.Get(r)
+		if len(body) < 6000 {
+			s.Logger.Error("can't fetch ",
+				zap.Int("length", len(body)),
+				zap.String("url", r.Url),
+			)
+			continue
+		}
 		if err != nil {
 			s.Logger.Error("can't fetch ",
 				zap.Error(err),
@@ -89,30 +110,40 @@ func (s *Schedule) CreateWork() {
 			)
 			continue
 		}
-		fmt.Println("begin parse content : ", r.Url)
 		result := r.ParseFunc(body, r)
-		//fmt.Printf("there")
-		//for _, res := range result.Requesrts {
-		//	fmt.Println(res.Url)
-		//}
+
+		if len(result.Requesrts) > 0 {
+			go s.scheduler.Push(result.Requesrts...)
+		}
+
 		s.out <- result
 	}
 }
 
-func (s *Schedule) HandleResult() {
+func (s *Crawler) HandleResult() {
 	for {
 		select {
 		case result := <-s.out:
-			//fmt.Println("handle result")
-			for _, req := range result.Requesrts {
-				//fmt.Println(req.Url)
-				s.requestCh <- req
-			}
 			for _, item := range result.Items {
-				//fmt.Println("handle result")
 				// todo: store
-				s.Logger.Sugar().Info("get result : ", item)
+				s.Logger.Sugar().Info("get result: ", item)
 			}
 		}
 	}
+}
+
+func (s *Schedule) Push(reqs ...*collect.Request) {
+	for _, req := range reqs {
+		s.requestCh <- req
+	}
+}
+
+func (s *Schedule) Pull() *collect.Request {
+	r := <-s.workerCh
+	return r
+}
+
+func (s *Schedule) Output() *collect.Request {
+	r := <-s.workerCh
+	return r
 }
