@@ -1,6 +1,7 @@
 package douban
 
 import (
+	"fmt"
 	"github.com/Tiandapaopao/crawler/collect"
 	"regexp"
 )
@@ -38,6 +39,7 @@ const ContentRe = `<div class="topic-content">[\s\S]*?阳台[\s\S]*?<div class="
 func GetContent(contents []byte, url string) collect.ParseResult {
 	re := regexp.MustCompile(ContentRe)
 	ok := re.Match(contents)
+	fmt.Println("parse!!!")
 	if !ok {
 		return collect.ParseResult{
 			Items: []interface{}{},

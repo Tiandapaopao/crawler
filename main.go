@@ -35,6 +35,7 @@ func main() {
 			MaxDepth: 5,
 			Fetcher:  f,
 			RootReq: &collect.Request{
+				Priority:  1,
 				Method:    "GET",
 				ParseFunc: douban.ParseURL,
 			},

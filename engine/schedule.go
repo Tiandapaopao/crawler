@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"github.com/Tiandapaopao/crawler/collect"
 	"go.uber.org/zap"
 	"sync"
@@ -22,10 +21,11 @@ type Scheduler interface {
 }
 
 type Schedule struct {
-	requestCh chan *collect.Request
-	workerCh  chan *collect.Request
-	Logger    *zap.Logger
-	reqQueue  []*collect.Request
+	requestCh   chan *collect.Request
+	workerCh    chan *collect.Request
+	Logger      *zap.Logger
+	reqQueue    []*collect.Request
+	priReqQueue []*collect.Request
 }
 
 func NewEngine(opts ...Option) *Crawler {
@@ -71,10 +71,14 @@ func (e *Crawler) Run() {
 }
 
 func (s *Schedule) Schedule() {
+	var req *collect.Request
+	var ch chan *collect.Request
 	for {
-		var req *collect.Request
-		var ch chan *collect.Request
-
+		if req == nil && len(s.priReqQueue) > 0 {
+			req = s.priReqQueue[0]
+			s.priReqQueue = s.priReqQueue[1:]
+			ch = s.workerCh
+		}
 		if len(s.reqQueue) > 0 {
 			req = s.reqQueue[0]
 			s.reqQueue = s.reqQueue[1:]
@@ -82,10 +86,15 @@ func (s *Schedule) Schedule() {
 		}
 		select {
 		case r := <-s.requestCh:
-			s.reqQueue = append(s.reqQueue, r)
-
+			if r.Priority > 0 {
+				s.priReqQueue = append(s.priReqQueue, r)
+			} else {
+				s.reqQueue = append(s.reqQueue, r)
+			}
 		case ch <- req:
-			fmt.Println(123)
+			//fmt.Println(123)
+			req = nil
+			ch = nil
 		}
 	}
 }
