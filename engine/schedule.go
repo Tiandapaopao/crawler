@@ -11,6 +11,8 @@ type Crawler struct {
 	out         chan collect.ParseResult
 	Visited     map[string]bool
 	VisitedLock sync.Mutex
+	failures    map[string]*collect.Request
+	failureLock sync.Mutex
 	options
 }
 
@@ -38,6 +40,8 @@ func NewEngine(opts ...Option) *Crawler {
 	e.Visited = make(map[string]bool, 100)
 	out := make(chan collect.ParseResult)
 	e.out = out
+	failures := make(map[string]*collect.Request)
+	e.failures = failures
 	return e
 }
 
@@ -109,26 +113,28 @@ func (s *Crawler) CreateWork() {
 			continue
 		}
 
-		if s.HasVisited(r) {
+		if !r.Task.Reload && s.HasVisited(r) {
 			s.Logger.Debug("request has visited",
 				zap.String("url:", r.Url),
 			)
+
 			continue
 		}
 		s.StoreVisited(r)
 		body, err := r.Task.Fetcher.Get(r)
-		if len(body) < 6000 {
-			s.Logger.Error("can't fetch ",
-				zap.Int("length", len(body)),
-				zap.String("url", r.Url),
-			)
-			continue
-		}
+		//if len(body) < 6000 {
+		//	s.Logger.Error("can't fetch ",
+		//		zap.Int("length", len(body)),
+		//		zap.String("url", r.Url),
+		//	)
+		//	continue
+		//}
 		if err != nil {
 			s.Logger.Error("can't fetch ",
 				zap.Error(err),
 				zap.String("url", r.Url),
 			)
+			s.SetFailure(r)
 			continue
 		}
 		result := r.ParseFunc(body, r)
@@ -184,4 +190,20 @@ func (e *Crawler) StoreVisited(reqs ...*collect.Request) {
 		unique := r.Unique()
 		e.Visited[unique] = true
 	}
+}
+
+func (e *Crawler) SetFailure(req *collect.Request) bool {
+	if !req.Task.Reload {
+		e.VisitedLock.Lock()
+		unique := req.Unique()
+		delete(e.Visited, unique)
+		e.VisitedLock.Unlock()
+	}
+	e.failureLock.Lock()
+	defer e.failureLock.Unlock()
+	if _, ok := e.failures[req.Unique()]; !ok {
+		e.failures[req.Unique()] = req
+		e.scheduler.Push(req)
+	}
+	return true
 }

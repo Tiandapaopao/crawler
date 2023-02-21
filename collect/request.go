@@ -13,6 +13,7 @@ type Task struct {
 	ParseTopic func([]byte, string) string
 	WaitTime   time.Duration
 	MaxDepth   int
+	Reload     bool
 	Fetcher    Fetcher
 	RootReq    *Request
 }
