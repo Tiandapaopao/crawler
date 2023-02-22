@@ -2,10 +2,30 @@ package engine
 
 import (
 	"github.com/Tiandapaopao/crawler/collect"
+	"github.com/Tiandapaopao/crawler/parse/douban"
 	"go.uber.org/zap"
 	"sync"
 	"time"
 )
+
+func init() {
+	Store.Add(douban.DoubangroupTask)
+}
+
+type CrawlerStore struct {
+	list []*collect.Task
+	hash map[string]*collect.Task
+}
+
+var Store = &CrawlerStore{
+	list: []*collect.Task{},
+	hash: map[string]*collect.Task{},
+}
+
+func (c *CrawlerStore) Add(task *collect.Task) {
+	c.list = append(c.list, task)
+	c.hash[task.Name] = task
+}
 
 type Crawler struct {
 	out         chan collect.ParseResult
@@ -57,9 +77,13 @@ func NewSchedule() *Schedule {
 func (e *Crawler) Schedule() {
 	var reqs []*collect.Request
 	for _, seed := range e.Seeds {
-		seed.RootReq.Task = seed
-		seed.RootReq.Url = seed.Url
-		reqs = append(reqs, seed.RootReq)
+		task := Store.hash[seed.Name]
+		task.Fetcher = seed.Fetcher
+		rootReqs := task.Rule.Root()
+		for _, req := range rootReqs {
+			req.Task = task
+		}
+		reqs = append(reqs, rootReqs...)
 	}
 	go e.scheduler.Schedule()
 	go e.scheduler.Push(reqs...)
@@ -137,7 +161,13 @@ func (s *Crawler) CreateWork() {
 			s.SetFailure(r)
 			continue
 		}
-		result := r.ParseFunc(body, r)
+
+		rule := r.Task.Rule.Trunk[r.RuleName]
+
+		result := rule.ParseFunc(&collect.Context{
+			body,
+			r,
+		})
 
 		if len(result.Requesrts) > 0 {
 			go s.scheduler.Push(result.Requesrts...)

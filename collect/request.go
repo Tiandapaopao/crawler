@@ -8,6 +8,7 @@ import (
 )
 
 type Task struct {
+	Name       string
 	Url        string
 	Cookie     string
 	ParseTopic func([]byte, string) string
@@ -15,6 +16,7 @@ type Task struct {
 	MaxDepth   int
 	Reload     bool
 	Fetcher    Fetcher
+	Rule       RuleTree
 	RootReq    *Request
 }
 
@@ -26,6 +28,12 @@ type Request struct {
 	Depth     int
 	Priority  int
 	Task      *Task
+	RuleName  string
+}
+
+type Context struct {
+	Body []byte
+	Req  *Request
 }
 
 type ParseResult struct {
