@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"github.com/Tiandapaopao/crawler/collector"
 	"regexp"
 	"sync"
 	"time"
@@ -36,6 +37,7 @@ type Request struct {
 	Priority int64
 	Task     *Task
 	RuleName string
+	TemData  *Temp
 }
 
 type Context struct {
@@ -92,4 +94,14 @@ func (c *Context) OutputJS(reg string) ParseResult {
 		Items: []interface{}{c.Req.Url},
 	}
 	return result
+}
+
+func (c *Context) Output(data interface{}) *collector.OutputData {
+	res := &collector.OutputData{}
+	res.Data = make(map[string]interface{})
+	res.Data["rule"] = c.Req.RuleName
+	res.Data["Data"] = data
+	res.Data["Url"] = c.Req.Url
+	res.Data["Time"] = time.Now().Format("2006-01-02 15:04:05")
+	return res
 }

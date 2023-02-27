@@ -2,7 +2,9 @@ package engine
 
 import (
 	"github.com/Tiandapaopao/crawler/collect"
-	"github.com/Tiandapaopao/crawler/parse/douban"
+	"github.com/Tiandapaopao/crawler/parse/doubanbook"
+	"github.com/Tiandapaopao/crawler/parse/doubangroup"
+	"github.com/Tiandapaopao/crawler/parse/doubangroupjs"
 	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
 	"sync"
@@ -10,7 +12,9 @@ import (
 )
 
 func init() {
-	Store.AddJSTask(douban.DoubangroupJSTask)
+	Store.Add(doubangroup.DoubangroupTask)
+	Store.Add(doubanbook.DoubanBookTask)
+	Store.AddJSTask(doubangroupjs.DoubangroupJSTask)
 }
 
 type mystruct struct {
@@ -95,7 +99,7 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModle) {
 			task.Rule.Trunk = make(map[string]*collect.Rule, 0)
 		}
 		task.Rule.Trunk[r.Name] = &collect.Rule{
-			paesrFunc,
+			ParseFunc: paesrFunc,
 		}
 	}
 

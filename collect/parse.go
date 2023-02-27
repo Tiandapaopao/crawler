@@ -6,5 +6,6 @@ type RuleTree struct {
 }
 
 type Rule struct {
-	ParseFunc func(*Context) (ParseResult, error)
+	ItemFields []string
+	ParseFunc  func(*Context) (ParseResult, error)
 }
