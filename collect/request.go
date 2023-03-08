@@ -1,23 +1,26 @@
 package collect
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
-	"github.com/Tiandapaopao/crawler/collector"
+	"github.com/Tiandapaopao/crawler/limiter"
+	"github.com/Tiandapaopao/crawler/storage"
 	"go.uber.org/zap"
+	"math/rand"
 	"regexp"
 	"sync"
 	"time"
 )
 
 type Property struct {
-	Name     string        `json:"name"` // 任务名称，应保证唯一性
-	Url      string        `json:"url"`
-	Cookie   string        `json:"cookie"`
-	WaitTime time.Duration `json:"wait_time"`
-	Reload   bool          `json:"reload"` // 网站是否可以重复爬取
-	MaxDepth int64         `json:"max_depth"`
+	Name     string `json:"name"` // 任务名称，应保证唯一性
+	Url      string `json:"url"`
+	Cookie   string `json:"cookie"`
+	WaitTime int64  `json:"wait_time"`
+	Reload   bool   `json:"reload"` // 网站是否可以重复爬取
+	MaxDepth int64  `json:"max_depth"`
 }
 
 type Task struct {
@@ -25,9 +28,10 @@ type Task struct {
 	Fetcher     Fetcher
 	Visited     map[string]bool
 	VisitedLock sync.Mutex
-	Storage     collector.Storage
+	Storage     storage.Storage
 	Rule        RuleTree
 	Logger      *zap.Logger
+	Limit       limiter.RateLimiter
 	//RootReq  *Request
 }
 
@@ -99,8 +103,8 @@ func (c *Context) OutputJS(reg string) ParseResult {
 	return result
 }
 
-func (c *Context) Output(data interface{}) *collector.DataCell {
-	res := &collector.DataCell{}
+func (c *Context) Output(data interface{}) *storage.DataCell {
+	res := &storage.DataCell{}
 	res.Data = make(map[string]interface{})
 	res.Data["Task"] = c.Req.Task.Name
 	res.Data["rule"] = c.Req.RuleName
@@ -108,4 +112,14 @@ func (c *Context) Output(data interface{}) *collector.DataCell {
 	res.Data["Url"] = c.Req.Url
 	res.Data["Time"] = time.Now().Format("2006-01-02 15:04:05")
 	return res
+}
+
+func (r *Request) Fetch() ([]byte, error) {
+	if err := r.Task.Limit.Wait(context.Background()); err != nil {
+		return nil, err
+	}
+	// 随机休眠，模拟人类行为
+	sleeptime := rand.Int63n(r.Task.WaitTime * 1000)
+	time.Sleep(time.Duration(sleeptime) * time.Millisecond)
+	return r.Task.Fetcher.Get(r)
 }

@@ -2,10 +2,10 @@ package engine
 
 import (
 	"github.com/Tiandapaopao/crawler/collect"
-	"github.com/Tiandapaopao/crawler/collector"
 	"github.com/Tiandapaopao/crawler/parse/doubanbook"
 	"github.com/Tiandapaopao/crawler/parse/doubangroup"
 	"github.com/Tiandapaopao/crawler/parse/doubangroupjs"
+	"github.com/Tiandapaopao/crawler/storage"
 	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
 	"sync"
@@ -176,6 +176,7 @@ func (e *Crawler) Schedule() {
 		task.Fetcher = seed.Fetcher
 		task.Storage = seed.Storage
 		task.Logger = e.Logger
+		task.Limit = seed.Limit
 		//rootReqs := task.Rule.Root()
 		rootReqs, err := task.Rule.Root()
 		if err != nil {
@@ -249,7 +250,7 @@ func (s *Crawler) CreateWork() {
 			continue
 		}
 		s.StoreVisited(r)
-		body, err := r.Task.Fetcher.Get(r)
+		body, err := r.Fetch()
 		//fmt.Println(body)
 		//if len(body) < 6000 {
 		//	s.Logger.Error("can't fetch ",
@@ -297,7 +298,7 @@ func (s *Crawler) HandleResult() {
 			for _, item := range result.Items {
 				// todo: store
 				switch d := item.(type) {
-				case *collector.DataCell:
+				case *storage.DataCell:
 					name := d.GetTaskName()
 					task := Store.Hash[name]
 					task.Storage.Save(d)
