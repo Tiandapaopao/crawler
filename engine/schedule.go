@@ -2,6 +2,7 @@ package engine
 
 import (
 	"github.com/Tiandapaopao/crawler/collect"
+	"github.com/Tiandapaopao/crawler/collector"
 	"github.com/Tiandapaopao/crawler/parse/doubanbook"
 	"github.com/Tiandapaopao/crawler/parse/doubangroup"
 	"github.com/Tiandapaopao/crawler/parse/doubangroupjs"
@@ -15,11 +16,6 @@ func init() {
 	Store.Add(doubangroup.DoubangroupTask)
 	Store.Add(doubanbook.DoubanBookTask)
 	Store.AddJSTask(doubangroupjs.DoubangroupJSTask)
-}
-
-type mystruct struct {
-	Name string
-	Age  int
 }
 
 // 用于动态规则添加请求。
@@ -103,23 +99,23 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModle) {
 		}
 	}
 
-	c.hash[task.Name] = task
+	c.Hash[task.Name] = task
 	c.list = append(c.list, task)
 }
 
 type CrawlerStore struct {
 	list []*collect.Task
-	hash map[string]*collect.Task
+	Hash map[string]*collect.Task
 }
 
 var Store = &CrawlerStore{
 	list: []*collect.Task{},
-	hash: map[string]*collect.Task{},
+	Hash: map[string]*collect.Task{},
 }
 
 func (c *CrawlerStore) Add(task *collect.Task) {
 	c.list = append(c.list, task)
-	c.hash[task.Name] = task
+	c.Hash[task.Name] = task
 }
 
 type Crawler struct {
@@ -143,6 +139,10 @@ type Schedule struct {
 	Logger      *zap.Logger
 	reqQueue    []*collect.Request
 	priReqQueue []*collect.Request
+}
+
+func GetFields(taskName string, ruleName string) []string {
+	return Store.Hash[taskName].Rule.Trunk[ruleName].ItemFields
 }
 
 func NewEngine(opts ...Option) *Crawler {
@@ -172,8 +172,10 @@ func NewSchedule() *Schedule {
 func (e *Crawler) Schedule() {
 	var reqs []*collect.Request
 	for _, seed := range e.Seeds {
-		task := Store.hash[seed.Name]
+		task := Store.Hash[seed.Name]
 		task.Fetcher = seed.Fetcher
+		task.Storage = seed.Storage
+		task.Logger = e.Logger
 		//rootReqs := task.Rule.Root()
 		rootReqs, err := task.Rule.Root()
 		if err != nil {
@@ -294,6 +296,12 @@ func (s *Crawler) HandleResult() {
 		case result := <-s.out:
 			for _, item := range result.Items {
 				// todo: store
+				switch d := item.(type) {
+				case *collector.DataCell:
+					name := d.GetTaskName()
+					task := Store.Hash[name]
+					task.Storage.Save(d)
+				}
 				s.Logger.Sugar().Info("get result: ", item)
 			}
 		}

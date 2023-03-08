@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/Tiandapaopao/crawler/collect"
+	"github.com/Tiandapaopao/crawler/collector"
+	"github.com/Tiandapaopao/crawler/collector/sqlstorage"
 	"github.com/Tiandapaopao/crawler/engine"
 	"github.com/Tiandapaopao/crawler/log"
 	"go.uber.org/zap/zapcore"
@@ -12,6 +14,14 @@ import (
 //var headerRe = regexp.MustCompile(`<div class="small_cardcontent__BTALp"[\s\S]*?<h2>([\s\S]*?)</h2>`)
 
 func main() {
+	////令牌桶限流
+	//r := ratelimit.New(1, 3)
+	//for i := 0; i < 60; i++ {
+	//	res := r.Pass()
+	//	time.Sleep(100 * time.Millisecond)
+	//	fmt.Println(res)
+	//}
+	//return
 
 	plugin := log.NewStdoutPlugin(zapcore.InfoLevel)
 	logger := log.NewLogger(plugin)
@@ -24,12 +34,25 @@ func main() {
 		Logger:  logger,
 	}
 	var seeds = make([]*collect.Task, 0, 1000)
+
+	var storage collector.Storage
+	var err error
+	storage, err = sqlstorage.New(
+		sqlstorage.WithSqlUrl("root:root@tcp(go_project-mysql-1:3306)/crawler?charset=utf8"),
+		sqlstorage.WithLogger(logger.Named("sqlDB")),
+		sqlstorage.WithBatchCount(2),
+	)
+	if err != nil {
+		logger.Error("create sqlstorage failed")
+		return
+	}
 	seeds = append(seeds, &collect.Task{
 		//Name: "find_douban_sun_room",
 		Property: collect.Property{
 			Name: "douban_book_list",
 		},
 		Fetcher: f,
+		Storage: storage,
 	})
 
 	s := engine.NewEngine(

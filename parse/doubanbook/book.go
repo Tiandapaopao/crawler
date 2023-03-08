@@ -111,6 +111,7 @@ func ParseBookDetail(ctx *collect.Context) (collect.ParseResult, error) {
 	result := collect.ParseResult{
 		Items: []interface{}{data},
 	}
+	//result.Requesrts = result.Requesrts[:3]
 	return result, nil
 }
 
