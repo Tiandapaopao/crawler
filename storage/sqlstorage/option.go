@@ -7,7 +7,7 @@ import (
 type options struct {
 	logger     *zap.Logger
 	sqlUrl     string
-	BatchCount int
+	BatchCount int // 批量数
 }
 
 var defaultOptions = options{

@@ -53,7 +53,7 @@ func main() {
 		return
 	}
 	//2秒钟1个
-	secondLimit := rate.NewLimiter(limiter.Per(1, 2*time.Second), 1)
+	secondLimit := rate.NewLimiter(limiter.Per(1, 3*time.Second), 1)
 	//60秒20个
 	minuteLimit := rate.NewLimiter(limiter.Per(20, 1*time.Minute), 20)
 	multiLimiter := limiter.MultiLimiter(secondLimit, minuteLimit)

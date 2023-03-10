@@ -8,6 +8,7 @@ import (
 	"github.com/Tiandapaopao/crawler/storage"
 	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -233,6 +234,13 @@ func (s *Schedule) Schedule() {
 }
 
 func (s *Crawler) CreateWork() {
+	defer func() {
+		if err := recover(); err != nil {
+			s.Logger.Error("worker panic",
+				zap.Any("err", err),
+				zap.String("stack", string(debug.Stack())))
+		}
+	}()
 	for {
 		r := s.scheduler.Pull()
 		if err := r.Check(); err != nil {

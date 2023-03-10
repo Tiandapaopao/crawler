@@ -36,25 +36,6 @@ func New(opts ...Option) (*SqlStorage, error) {
 	return s, nil
 }
 
-func getFields(cell *storage.DataCell) []sqldb.Field {
-	taskName := cell.Data["Task"].(string)
-	ruleName := cell.Data["Rule"].(string)
-	fields := engine.GetFields(taskName, ruleName)
-
-	var columnNames []sqldb.Field
-	for _, field := range fields {
-		columnNames = append(columnNames, sqldb.Field{
-			Title: field,
-			Type:  "MEDIUMTEXT",
-		})
-	}
-	columnNames = append(columnNames,
-		sqldb.Field{Title: "Url", Type: "VARCHAR(255)"},
-		sqldb.Field{Title: "Time", Type: "VARCHAR(255)"},
-	)
-	return columnNames
-}
-
 func (s *SqlStorage) Save(dataCells ...*storage.DataCell) error {
 	for _, cell := range dataCells {
 		name := cell.GetTableName()
@@ -82,6 +63,25 @@ func (s *SqlStorage) Save(dataCells ...*storage.DataCell) error {
 	return nil
 }
 
+func getFields(cell *storage.DataCell) []sqldb.Field {
+	taskName := cell.Data["Task"].(string)
+	ruleName := cell.Data["Rule"].(string)
+	fields := engine.GetFields(taskName, ruleName)
+
+	var columnNames []sqldb.Field
+	for _, field := range fields {
+		columnNames = append(columnNames, sqldb.Field{
+			Title: field,
+			Type:  "MEDIUMTEXT",
+		})
+	}
+	columnNames = append(columnNames,
+		sqldb.Field{Title: "Url", Type: "VARCHAR(255)"},
+		sqldb.Field{Title: "Time", Type: "VARCHAR(255)"},
+	)
+	return columnNames
+}
+
 func (s *SqlStorage) Flush() (err error) {
 	if len(s.dataDocker) == 0 {
 		return nil
@@ -94,7 +94,7 @@ func (s *SqlStorage) Flush() (err error) {
 		ruleName := datacell.Data["Rule"].(string)
 		taskName := datacell.Data["Task"].(string)
 		fields := engine.GetFields(taskName, ruleName)
-		data := datacell.Data["data"].(map[string]interface{})
+		data := datacell.Data["Data"].(map[string]interface{})
 		value := []string{}
 		for _, field := range fields {
 			v := data[field]
@@ -117,6 +117,7 @@ func (s *SqlStorage) Flush() (err error) {
 			args = append(args, v)
 		}
 	}
+
 	return s.db.Insert(sqldb.TableData{
 		TableName:   s.dataDocker[0].GetTableName(),
 		ColumnNames: getFields(s.dataDocker[0]),

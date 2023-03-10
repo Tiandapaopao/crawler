@@ -107,7 +107,7 @@ func (c *Context) Output(data interface{}) *storage.DataCell {
 	res := &storage.DataCell{}
 	res.Data = make(map[string]interface{})
 	res.Data["Task"] = c.Req.Task.Name
-	res.Data["rule"] = c.Req.RuleName
+	res.Data["Rule"] = c.Req.RuleName
 	res.Data["Data"] = data
 	res.Data["Url"] = c.Req.Url
 	res.Data["Time"] = time.Now().Format("2006-01-02 15:04:05")
@@ -119,7 +119,9 @@ func (r *Request) Fetch() ([]byte, error) {
 		return nil, err
 	}
 	// 随机休眠，模拟人类行为
-	sleeptime := rand.Int63n(r.Task.WaitTime * 1000)
+	//sleeptime := rand.Int63n(r.Task.WaitTime * 1000)
+
+	sleeptime := rand.Int63n(r.Task.WaitTime*1000-10000) + 10000
 	time.Sleep(time.Duration(sleeptime) * time.Millisecond)
 	return r.Task.Fetcher.Get(r)
 }
